@@ -1,0 +1,31 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "stupidmirror",
+  "displayName": "StupidMirror",
+  "version": "0.2.1",
+  "description": "Observe and control real iPhone, Android, Simulator, and emulator screens via the StupidMirror Mac app, with a live mirror and annotation pane.",
+  "author": {
+    "name": "StupidMirror",
+    "url": "https://stupidmirror.itool.tech/"
+  },
+  "homepage": "https://stupidmirror.itool.tech/",
+  "repository": "https://github.com/LiuTianjie/stupidmirror-antigravity-plugin",
+  "license": "Proprietary",
+  "keywords": [
+    "ios",
+    "android",
+    "iphone",
+    "simulator",
+    "emulator",
+    "mobile",
+    "mirror",
+    "testing",
+    "automation"
+  ],
+  "logo": "assets/icon.png",
+  "suggestedPrompts": [
+    "Open StupidMirror and watch my phone screen without tapping",
+    "List my connected iPhone, Android devices, simulators, and emulators",
+    "Inspect the current screen on my connected phone and explain what is shown"
+  ]
+}

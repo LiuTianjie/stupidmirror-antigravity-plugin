@@ -1,0 +1,28 @@
+{
+  "stupidmirror-show-screen-first": {
+    "PreToolUse": [
+      {
+        "matcher": "call_mcp_tool|mcp_.*stupidmirror.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/show-screen-first.sh pre",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "call_mcp_tool|mcp_.*stupidmirror.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/show-screen-first.sh post",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

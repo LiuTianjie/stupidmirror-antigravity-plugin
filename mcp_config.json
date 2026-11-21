@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcp": {
+      "command": "bash",
+      "args": [
+        "${PLUGIN_ROOT}/scripts/start.sh"
+      ]
+    }
+  }
+}

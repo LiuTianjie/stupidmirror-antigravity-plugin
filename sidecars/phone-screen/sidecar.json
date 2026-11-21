@@ -1,0 +1,18 @@
+{
+  "command": "node",
+  "args": ["main.mjs"],
+  "restart_policy": "always",
+  "display_name": "StupidMirror",
+  "description": "Live iPhone and Android screen mirror, touch control, and screenshot annotation panel for Antigravity.",
+  "has_web_ui": true,
+  "ui_config": {
+    "display_name": "StupidMirror",
+    "views": [
+      {
+        "path": "/",
+        "entrypoint": "SIDECAR_UI_ENTRYPOINT_AUX_PANE",
+        "title": "StupidMirror"
+      }
+    ]
+  }
+}
