@@ -14,6 +14,7 @@ import http from 'node:http';
 import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
 import { SidecarApp, Response } from 'sidecar_sdk';
+import { sanitizedDesktopLaunchEnv, shouldAutoLaunchForViewerCall } from './launchPolicy.mjs';
 
 const ALLOWED_TOOLS = new Set(['show_screen', 'screen_frame', 'screen_action', 'screen_signal']);
 const CONV_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
@@ -23,17 +24,29 @@ const SIDECAR_META = '<meta name="stupidmirror-viewer" content="sidecar"><script
 
 let lastLaunchAttemptMs = 0;
 
+function getPlatformDataDir() {
+  const home = homedir();
+  if (process.platform === 'darwin') {
+    return join(home, 'Library', 'Application Support', 'StupidMirror');
+  }
+  if (process.platform === 'win32') {
+    return join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'StupidMirror');
+  }
+  return join(process.env.XDG_CONFIG_HOME || join(home, '.config'), 'StupidMirror');
+}
+
 function resolveAppPath() {
   const home = homedir();
+  const dataDir = getPlatformDataDir();
   const candidates = [];
   if (process.env.STUPIDMIRROR_APP) {
     candidates.push(process.env.STUPIDMIRROR_APP);
   }
-  for (const rel of [
-    'Library/Application Support/StupidMirror/Antigravity/app-path',
-    'Library/Application Support/StupidMirror/Codex/app-path',
+  for (const file of [
+    join(dataDir, 'Clients', 'app-path'),
+    join(dataDir, 'Antigravity', 'app-path'),
+    join(dataDir, 'Codex', 'app-path'),
   ]) {
-    const file = join(home, rel);
     try {
       if (existsSync(file)) {
         const saved = readFileSync(file, 'utf8').trim();
@@ -43,11 +56,27 @@ function resolveAppPath() {
       // Ignore unreadable hint files.
     }
   }
-  candidates.push('/Applications/StupidMirror.app', join(home, 'Applications/StupidMirror.app'));
+  if (process.platform === 'darwin') {
+    candidates.push('/Applications/StupidMirror.app', join(home, 'Applications/StupidMirror.app'));
+  } else if (process.platform === 'win32') {
+    const localAppData = process.env.LOCALAPPDATA || join(home, 'AppData', 'Local');
+    candidates.push(
+      join(localAppData, 'Programs', 'StupidMirror', 'StupidMirror.exe'),
+      'C:\\Program Files\\StupidMirror\\StupidMirror.exe',
+    );
+  }
   for (const appPath of candidates) {
-    const htmlPath = join(appPath, 'Contents/Resources/CodexPlugin/plugins/stupidmirror/assets/phone-screen.html');
-    if (existsSync(htmlPath)) {
-      return { appPath, htmlPath };
+    const baseDir = appPath.endsWith('.exe') ? dirname(appPath) : appPath;
+    for (const htmlPath of [
+      join(appPath, 'Contents/Resources/plugins/stupidmirror/assets/phone-screen.html'),
+      join(appPath, 'Contents/Resources/CodexPlugin/plugins/stupidmirror/assets/phone-screen.html'),
+      join(baseDir, 'resources/plugins/stupidmirror/assets/phone-screen.html'),
+      join(baseDir, 'resources/phone-screen.html'),
+      join(baseDir, 'plugins/stupidmirror/assets/phone-screen.html'),
+    ]) {
+      if (existsSync(htmlPath)) {
+        return { appPath, htmlPath };
+      }
     }
   }
   for (const appPath of candidates) {
@@ -59,12 +88,14 @@ function resolveAppPath() {
 }
 
 function readConnectionRecord() {
-  const filePath = join(homedir(), 'Library/Application Support/StupidMirror/MCP/connection.json');
+  const filePath = join(getPlatformDataDir(), 'MCP', 'connection.json');
   try {
     const stat = statSync(filePath);
     if (!stat.isFile()) return null;
-    if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) return null;
-    if ((stat.mode & 0o077) !== 0) return null;
+    if (process.platform !== 'win32') {
+      if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) return null;
+      if ((stat.mode & 0o077) !== 0) return null;
+    }
     const raw = JSON.parse(readFileSync(filePath, 'utf8'));
     if (raw?.schemaVersion !== 1 || typeof raw?.endpoint !== 'string' || typeof raw?.bearerToken !== 'string') {
       return null;
@@ -102,10 +133,22 @@ function launchAppIfNeeded() {
   const { appPath } = resolveAppPath();
   if (!appPath || !existsSync(appPath)) return false;
   lastLaunchAttemptMs = now;
+  const env = sanitizedDesktopLaunchEnv();
   try {
-    const child = spawn('/usr/bin/open', ['-g', '-a', appPath], {
+    if (process.platform === 'darwin' && appPath.endsWith('.app')) {
+      const child = spawn('/usr/bin/open', ['-g', '-a', appPath], {
+        stdio: 'ignore',
+        detached: true,
+        env,
+      });
+      child.unref();
+      return true;
+    }
+    const child = spawn(appPath, [], {
       stdio: 'ignore',
       detached: true,
+      windowsHide: true,
+      env,
     });
     child.unref();
     return true;
@@ -114,10 +157,10 @@ function launchAppIfNeeded() {
   }
 }
 
-async function ensureConnection() {
+async function ensureConnection({ allowLaunch = false } = {}) {
   let conn = readConnectionRecord();
   if (conn) return conn;
-  if (launchAppIfNeeded()) {
+  if (allowLaunch && launchAppIfNeeded()) {
     for (let i = 0; i < 16; i++) {
       await new Promise((r) => setTimeout(r, 250));
       conn = readConnectionRecord();
@@ -313,7 +356,8 @@ app.api(
       name,
       arguments: data?.arguments && typeof data.arguments === 'object' ? data.arguments : {},
     };
-    let conn = await ensureConnection();
+    const allowLaunch = shouldAutoLaunchForViewerCall(name, payload.arguments);
+    let conn = await ensureConnection({ allowLaunch });
     if (!conn) {
       return jsonResponse(503, {
         error: {
@@ -337,7 +381,7 @@ app.api(
         headers: { 'Cache-Control': 'no-store' },
       });
     } catch (firstErr) {
-      const refreshed = await ensureConnection();
+      const refreshed = await ensureConnection({ allowLaunch: false });
       if (refreshed && (refreshed.port !== conn.port || refreshed.bearerToken !== conn.bearerToken)) {
         try {
           const upstream = await postLocalViewerCall(refreshed, payload);
