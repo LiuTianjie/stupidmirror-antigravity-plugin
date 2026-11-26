@@ -4,8 +4,8 @@ Lets Antigravity see and operate a real iPhone or Android phone, an iOS Simulato
 
 ## Requirements
 
-- **macOS 15 or later** with [StupidMirror](https://downloads.itool.tech/stupidmirror/index.html) installed in `/Applications/StupidMirror.app` (or point `STUPIDMIRROR_APP` to a custom `.app` path).
-- Enable the local MCP server in **StupidMirror → Settings → MCP Automation**.
+- **macOS 14 or later (Apple Silicon)** with [StupidMirror](https://downloads.itool.tech/stupidmirror/index.html) installed in `/Applications/StupidMirror.app` (or point `STUPIDMIRROR_APP` to a custom `.app` path).
+- Enable the local MCP server in **StupidMirror → Settings → AI Clients**.
 - One device is free; mirroring/controlling multiple devices simultaneously requires an [iTool Pro membership](https://www.itool.tech/pro?product=stupidmirror).
 
 ## Install
@@ -14,7 +14,7 @@ Lets Antigravity see and operate a real iPhone or Android phone, an iOS Simulato
   ```bash
   agy plugin install https://github.com/LiuTianjie/stupidmirror-antigravity-plugin
   ```
-- **From StupidMirror App**: Open **Settings → MCP Automation** and click **Connect** on the Antigravity card.
+- **From StupidMirror App**: Open **Settings → AI Clients** and click **Connect** on the Antigravity card.
 
 ## What is in this plugin
 

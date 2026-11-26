@@ -20,13 +20,13 @@ fi
 
 helper="$app_path/Contents/Helpers/StupidMirrorMCPBridge"
 if [ -x "$helper" ]; then
-  exec "$helper" --app "$app_path"
+  exec "$helper" --app "$app_path" --client antigravity
 fi
 
 electron_bin="$app_path/Contents/MacOS/StupidMirror"
 bridge_js="$app_path/Contents/Resources/app.asar.unpacked/out/bridge/mcpBridge.js"
 if [ -x "$electron_bin" ] && [ -f "$bridge_js" ]; then
-  ELECTRON_RUN_AS_NODE=1 exec "$electron_bin" "$bridge_js" --app "$app_path"
+  ELECTRON_RUN_AS_NODE=1 exec "$electron_bin" "$bridge_js" --app "$app_path" --client antigravity
 fi
 
 echo "StupidMirror's MCP helper is missing. Install StupidMirror in Applications, or set STUPIDMIRROR_APP to its .app path. See the stupidmirror-setup skill." >&2
